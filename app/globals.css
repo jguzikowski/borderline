@@ -1,0 +1,60 @@
+:root {
+  --ink: #0F2A33;
+  --ink-2: #173C48;
+  --sea: #1E4854;
+  --paper: #EFE7D6;
+  --bone: #C9BFA8;
+  --ochre: #D9A441;
+  --jade: #4E9E7E;
+  --rust: #C1553B;
+  --amber: #E8C56A;
+  --fog: #8FA3A9;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 18px 16px 48px; }
+
+h1.region {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px; line-height: 1.1; margin: 4px 0 2px; font-weight: 400;
+}
+
+.eyebrow { font-size: 11px; letter-spacing: 0.14em; color: var(--fog); }
+.muted { color: var(--fog); }
+
+button {
+  font-family: inherit; font-size: 14px; font-weight: 500;
+  padding: 10px 16px; border-radius: 4px; cursor: pointer;
+  background: transparent; color: var(--paper);
+  border: 1px solid rgba(239, 231, 214, 0.4);
+}
+button.primary { background: var(--amber); color: var(--ink); border-color: var(--amber); }
+button.quiet { border-color: transparent; color: var(--fog); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+input {
+  padding: 10px 12px; font-size: 16px; border-radius: 4px;
+  border: 1px solid var(--fog); background: var(--ink); color: var(--paper);
+  outline: none; width: 100%;
+}
+input:focus-visible { border-color: var(--amber); }
+
+.panel { background: var(--ink-2); border-radius: 6px; padding: 16px; margin-top: 14px; }
+.map-frame { position: relative; background: var(--ink-2); border-radius: 6px; overflow: hidden; }
+svg.map { display: block; touch-action: none; }
+svg.map path.target { transition: fill 220ms ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  svg.map path.target { transition: none; }
+}
