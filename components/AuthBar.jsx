@@ -52,10 +52,8 @@ export default function AuthBar({ signedIn, email, isGuest }) {
 
   if (!emailEnabled && !signedIn) {
     return (
-      <div style={{ marginBottom: 14, fontSize: 12 }} className="muted">
-        Saved logins are coming soon, so your results carry across devices and
-        you can see whether you improve when a region comes round again. Your
-        history is kept in this browser in the meantime.
+      <div style={{ marginTop: 8, fontSize: 11 }} className="muted">
+        History is saved in this browser. Accounts are coming.
       </div>
     );
   }

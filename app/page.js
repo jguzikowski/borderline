@@ -18,6 +18,10 @@ export default async function Page() {
 
   return (
     <main className="wrap">
+      <div className="masthead">
+        <span className="wordmark">Cartogram</span>
+        <span className="tagline">The daily map game</span>
+      </div>
       <AuthBar signedIn={!!user && !user.is_anonymous} email={user?.email ?? null} isGuest={!!user?.is_anonymous} />
       <Game puzzleNumber={n} region={region} signedIn={!!user && !user.is_anonymous} isGuest={!!user?.is_anonymous} />
       <SponsorSlot />

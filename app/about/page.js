@@ -20,7 +20,9 @@ export default function About() {
       <p style={{ lineHeight: 1.6, maxWidth: "60ch" }}>
         Regions are groupings people actually use rather than continents:
         the Sahel, the Deep South, the Southern Cone, landlocked Europe.
-        They overlap on purpose. Colorado belongs to three of them.
+        Some are countries, some are US states, so a shape might be Chad or
+        it might be Nebraska. They overlap on purpose too. Colorado belongs
+        to three of them.
       </p>
 
       <h2 style={{ fontFamily: "Georgia, serif", fontWeight: 400, fontSize: 20, marginTop: 28 }}>
