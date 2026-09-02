@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { geoMercator, geoAlbers, geoPath } from "d3-geo";
 import { DIFF_LABEL } from "@/data/regions";
-import { dayKeyFor, puzzleNumber, regionForPuzzle } from "@/lib/daily";
+import { dayKeyFor } from "@/lib/daily";
 import { browserClient } from "@/lib/supabase/client";
 import { siteUrl } from "@/lib/site-url";
 
@@ -15,23 +15,36 @@ const FILL = {
   miss_exact: "var(--rust)",
 };
 
-const post = (url, body) =>
-  fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).then((r) => r.json());
+// Returns { error } rather than throwing on a non-JSON response. An HTML
+// body here means the request reached a web page instead of the API,
+// which is almost always a misconfigured URL.
+const post = async (url, body) => {
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await r.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.error(`Non-JSON response from ${url} (HTTP ${r.status})`, text.slice(0, 400));
+      return { error: `${url} returned a web page instead of data (HTTP ${r.status}). Check that NEXT_PUBLIC_SUPABASE_URL points at your Supabase project, not at this site.` };
+    }
+  } catch (err) {
+    return { error: `Couldn't reach ${url}: ${err.message}` };
+  }
+};
 
 export default function Game({ puzzleNumber: serverNumber, region: serverRegion, signedIn, isGuest }) {
-  // Recompute from the device clock so the puzzle turns over at local
-  // midnight. Same date, same puzzle, whatever timezone you're in.
-  const [local, setLocal] = useState({ n: serverNumber, region: serverRegion });
-  useEffect(() => {
-    const n = puzzleNumber(dayKeyFor());
-    if (n !== serverNumber) setLocal({ n, region: regionForPuzzle(n) });
-  }, [serverNumber]);
-  const puzzleNo = local.n;
-  const region = local.region;
+  // Server props are the first paint. The session response is the truth,
+  // because a scheduled override only exists in the database. The local
+  // day key still drives which puzzle gets requested, so the turnover
+  // happens at the player's own midnight.
+  const [resolved, setResolved] = useState({ n: serverNumber, region: serverRegion });
+  const puzzleNo = resolved.n;
+  const region = resolved.region;
 
   const [geo, setGeo] = useState(null);
   const [session, setSession] = useState(null);
@@ -61,6 +74,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
 
   useEffect(() => {
     let alive = true;
+    setGeo(null);
     fetch(`/regions/${region.id}.json`)
       .then((r) => {
         if (!r.ok) throw new Error(r.status);
@@ -99,6 +113,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
       if (!alive) return;
       if (d.error) { setError(d.error); return; }
       setSession(d);
+      if (d.region) setResolved({ n: d.puzzleNumber, region: d.region });
       setHardMode(d.hardMode);
       const seeded = {};
       for (const a of d.answered) seeded[a.code] = { outcome: a.outcome, name: a.target_name };
@@ -193,12 +208,22 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
 
   /* ---------------- zoom and pan ---------------- */
 
+  // k of 1 is the region filling the frame. Below that you pull back to
+  // see where in the world it sits, which is most of the point of a
+  // region game. Zoomed out, the map centres itself rather than letting
+  // you drag a small shape into a corner.
+  const MIN_K = 0.3;
+  const MAX_K = 8;
+
   const clamp = (v) => {
-    const k = Math.max(1, Math.min(8, v.k));
+    const k = Math.max(MIN_K, Math.min(MAX_K, v.k));
+    if (k <= 1) {
+      return { k, x: (size.w * (1 - k)) / 2, y: (size.h * (1 - k)) / 2 };
+    }
     return {
       k,
-      x: Math.max(-size.w * (k - 1), Math.min(0, v.x)),
-      y: Math.max(-size.h * (k - 1), Math.min(0, v.y)),
+      x: Math.max(size.w * (1 - k), Math.min(0, v.x)),
+      y: Math.max(size.h * (1 - k), Math.min(0, v.y)),
     };
   };
   const at = (e) => {
@@ -207,7 +232,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   };
   const zoomAt = (px, py, factor) =>
     setView((v) => {
-      const k = Math.max(1, Math.min(8, v.k * factor));
+      const k = Math.max(MIN_K, Math.min(MAX_K, v.k * factor));
       const f = k / v.k;
       return clamp({ k, x: px - (px - v.x) * f, y: py - (py - v.y) * f });
     });
@@ -319,13 +344,17 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
           style={{ padding: "6px 12px", fontSize: 12, color: hardMode ? "var(--amber)" : "var(--fog)" }}>
           {hardMode ? "Hard mode on" : "Hard mode off"}
         </button>
-        {k > 1 && (
+        <button className="quiet" style={{ padding: "6px 10px", fontSize: 14, lineHeight: 1 }}
+          aria-label="Zoom out" onClick={() => zoomAt(size.w / 2, size.h / 2, 1 / 1.4)}>−</button>
+        <button className="quiet" style={{ padding: "6px 10px", fontSize: 14, lineHeight: 1 }}
+          aria-label="Zoom in" onClick={() => zoomAt(size.w / 2, size.h / 2, 1.4)}>+</button>
+        {Math.abs(k - 1) > 0.01 && (
           <button className="quiet" onClick={() => setView({ k: 1, x: 0, y: 0 })} style={{ padding: "6px 12px", fontSize: 12 }}>
-            Reset view
+            Fit region
           </button>
         )}
         <span style={{ fontSize: 12 }} className="muted">
-          {hardMode ? "Neighbours hidden." : "Scroll or pinch to zoom, drag to pan."}
+          {hardMode ? "Neighbours hidden." : "Zoom out to get your bearings."}
         </span>
       </div>
 
@@ -340,7 +369,8 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
             <g transform={`translate(${view.x},${view.y}) scale(${k})`}>
               {!hardMode && geo.context.map((f, i) => (
                 <path key={"c" + i} d={path({ type: "Feature", geometry: f.geometry }) || ""}
-                  fill="var(--sea)" stroke="var(--ink)" strokeWidth={0.5 / k} />
+                  fill="var(--sea)" stroke="var(--ink)" strokeWidth={0.5 / Math.max(k, 1)}
+                  opacity={k < 1 ? 0.85 : 1} />
               ))}
               {geo.targets.map((t) => {
                 const r = results[t.code];
@@ -348,7 +378,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
                 return (
                   <path key={t.code} className="target"
                     d={path({ type: "Feature", geometry: t.geometry }) || ""}
-                    fill={fill} stroke="var(--ink)" strokeWidth={0.9 / k}
+                    fill={fill} stroke="var(--ink)" strokeWidth={0.9 / Math.max(k, 1)}
                     style={{ cursor: r ? "default" : "pointer" }}
                     onPointerDown={() => { pressedShape.current = t.code; }} />
                 );
@@ -362,7 +392,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
                   if (!c || Number.isNaN(c[0]) || path.area(feat) * k * k < 300) return null;
                   return (
                     <text key={"l" + t.code} x={c[0]} y={c[1]} textAnchor="middle" dominantBaseline="middle"
-                      style={{ fontSize: 9 / k, fill: "var(--ink)", fontWeight: 600 }}>{r.name}</text>
+                      style={{ fontSize: 9 / Math.max(k, 1), fill: "var(--ink)", fontWeight: 600 }}>{r.name}</text>
                   );
                 })}
               </g>

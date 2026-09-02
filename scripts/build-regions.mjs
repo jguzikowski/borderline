@@ -144,15 +144,32 @@ async function main() {
       }
     }
 
-    // Neighbours for context, from a padded bounding box.
+    // Two rings of context. The near ring gives the immediate neighbours
+    // at the default zoom. The far ring only matters when someone pulls
+    // back to work out which continent they're looking at, so it's
+    // simplified hard to keep the file small.
     const box = bbox(targets);
-    const padX = Math.max(2, (box[2] - box[0]) * 0.35);
-    const padY = Math.max(2, (box[3] - box[1]) * 0.35);
-    const padded = [box[0] - padX, box[1] - padY, box[2] + padX, box[3] + padY];
-    const context = all.filter((f) => !targets.includes(f) && overlaps(f, padded));
+    const spanX = box[2] - box[0];
+    const spanY = box[3] - box[1];
+
+    const nearBox = [
+      box[0] - Math.max(2, spanX * 0.4), box[1] - Math.max(2, spanY * 0.4),
+      box[2] + Math.max(2, spanX * 0.4), box[3] + Math.max(2, spanY * 0.4),
+    ];
+    const farBox = [
+      box[0] - Math.max(20, spanX * 2.2), box[1] - Math.max(15, spanY * 2.2),
+      box[2] + Math.max(20, spanX * 2.2), box[3] + Math.max(15, spanY * 2.2),
+    ];
+
+    const near = all.filter((f) => !targets.includes(f) && overlaps(f, nearBox));
+    const far = all.filter(
+      (f) => !targets.includes(f) && !near.includes(f) && overlaps(f, farBox)
+    );
 
     const simpleTargets = await simplify(targets, 6);
-    const simpleContext = await simplify(context, 3);
+    const simpleNear = await simplify(near, 3);
+    const simpleFar = await simplify(far, 1);
+    const simpleContext = [...simpleNear, ...simpleFar];
 
     answers[region.id] = {};
     const outTargets = simpleTargets.map((f) => {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { serverClient, adminClient } from "@/lib/supabase/server";
 import { codesForRegion } from "@/lib/answers";
-import { utcDayKey, puzzleNumber, dateString, regionForPuzzle, isPlausibleDayKey } from "@/lib/daily";
+import { utcDayKey, isPlausibleDayKey } from "@/lib/daily";
+import { resolvePuzzle, ensurePuzzleRow } from "@/lib/puzzle";
 
 // Starts (or resumes) today's play. Returns which shapes are already
 // answered so a refresh doesn't lose progress or let you re-guess.
@@ -15,14 +16,12 @@ export async function POST(req) {
   // The browser reports its own local date. Anything outside a day of UTC
   // is rejected, so nobody can walk the archive by lying about their clock.
   const dayKey = isPlausibleDayKey(claimed) ? claimed : utcDayKey();
-  const n = puzzleNumber(dayKey);
-  const region = regionForPuzzle(n);
-  const db = adminClient();
 
-  await db.from("puzzles").upsert(
-    { n, play_date: dateString(dayKey), region_id: region.id, difficulty: region.diff },
-    { onConflict: "n" }
-  );
+  // A scheduled override wins over the generated rotation.
+  const { n, region } = await resolvePuzzle(dayKey);
+
+  const db = adminClient();
+  await ensurePuzzleRow(db, dayKey, region);
 
   let { data: play } = await db
     .from("plays")

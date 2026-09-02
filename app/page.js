@@ -3,7 +3,8 @@ import AuthBar from "@/components/AuthBar";
 import SponsorSlot from "@/components/SponsorSlot";
 import SiteFooter from "@/components/SiteFooter";
 import { serverClient } from "@/lib/supabase/server";
-import { utcDayKey, puzzleNumber, regionForPuzzle } from "@/lib/daily";
+import { utcDayKey } from "@/lib/daily";
+import { resolvePuzzle } from "@/lib/puzzle";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,9 @@ export default async function Page() {
   const supabase = serverClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Server-rendered from UTC as a first paint. The client recomputes from
-  // its own local date on mount, which is the number that counts.
-  const n = puzzleNumber(utcDayKey());
-  const region = regionForPuzzle(n);
+  // First paint from UTC. The client recomputes against its own local
+  // date, and the session response is what finally settles the region.
+  const { n, region } = await resolvePuzzle(utcDayKey());
 
   return (
     <main className="wrap">
