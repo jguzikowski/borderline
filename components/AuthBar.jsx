@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { browserClient } from "@/lib/supabase/client";
+import { siteUrl } from "@/lib/site-url";
 
 export default function AuthBar({ signedIn, email, isGuest }) {
   const [sending, setSending] = useState(false);
@@ -17,9 +18,9 @@ export default function AuthBar({ signedIn, email, isGuest }) {
     setSending(true);
     setProblem(null);
 
-    // Falls back to the current origin if the env var is unset, which is
-    // otherwise a silent failure: emailRedirectTo becomes "undefined/...".
-    const base = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    // Falls back to the current origin if the env var is unset, and adds
+    // a missing scheme, both of which otherwise fail silently.
+    const base = siteUrl();
 
     // An anonymous player gets upgraded in place, so the scores they've
     // already banked carry over. Everyone else gets a normal magic link.

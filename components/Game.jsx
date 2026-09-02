@@ -5,6 +5,7 @@ import { geoMercator, geoAlbers, geoPath } from "d3-geo";
 import { DIFF_LABEL } from "@/data/regions";
 import { dayKeyFor, puzzleNumber, regionForPuzzle } from "@/lib/daily";
 import { browserClient } from "@/lib/supabase/client";
+import { siteUrl } from "@/lib/site-url";
 
 const CHIP = { exact: "🟩", narrowed: "🟨", miss_narrow: "🟧", miss_exact: "🟥" };
 const FILL = {
@@ -258,7 +259,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
 
   const shareText = () => {
     const last = session?.lastPlay;
-    const site = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    const site = siteUrl();
     return (
       `Borderline #${puzzleNo} — ${region.name}${hardMode ? " (hard)" : ""}\n` +
       `${summary?.score ?? score}/${summary?.maxScore ?? total * 3}` +
