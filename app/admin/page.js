@@ -44,6 +44,7 @@ export default async function Admin() {
     ...d,
     regionId: pinnedBy[d.n] ?? regionForPuzzle(d.n).id,
     pinned: !!pinnedBy[d.n],
+    plays: playCount[d.n] ?? 0,
     locked: (playCount[d.n] ?? 0) > 0,
   }));
 
@@ -55,7 +56,9 @@ export default async function Admin() {
       <p className="muted" style={{ fontSize: 13, maxWidth: "60ch" }}>
         Unscheduled days follow the generated rotation. Setting one here pins it.
         A day with plays against it is locked, since changing it would invalidate
-        scores people already earned.
+        scores people already earned. You can unlock one, but that deletes those
+        plays. Fine while it's only your own testing, worth thinking twice about
+        once other people are playing.
       </p>
       <AdminSchedule rows={rows} regions={regions} />
       <p style={{ marginTop: 24 }}>
