@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://cartogram.gg";
 const DESCRIPTION =
@@ -30,7 +31,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>{children}<Analytics /></body>
     </html>
   );
 }
