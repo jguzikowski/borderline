@@ -1,13 +1,13 @@
 import SiteFooter from "@/components/SiteFooter";
 
-export const metadata = { title: "About Borderline" };
+export const metadata = { title: "About Cartogram" };
 
 export default function About() {
   const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 
   return (
     <main className="wrap">
-      <h1 className="region">About</h1>
+      <h1 className="region">About Cartogram</h1>
 
       <p style={{ lineHeight: 1.6, maxWidth: "60ch" }}>
         Every day you get one region of the world with the borders drawn and
@@ -29,7 +29,7 @@ export default function About() {
       <p style={{ lineHeight: 1.6, maxWidth: "60ch" }}>
         One text line under the puzzle, no scripts and no tracking pixels.
         {email && (
-          <> Write to <a href={`mailto:${email}?subject=Borderline%20sponsorship`} style={{ color: "var(--paper)" }}>{email}</a> and
+          <> Write to <a href={`mailto:${email}?subject=Cartogram%20sponsorship`} style={{ color: "var(--paper)" }}>{email}</a> and
           I&rsquo;ll send current numbers.</>
         )}
       </p>
@@ -40,7 +40,7 @@ export default function About() {
       <p style={{ lineHeight: 1.6, maxWidth: "60ch" }}>
         Region membership is a judgement call and some of mine are arguable.
         If a grouping looks wrong, or a name you typed should have counted,
-        {email ? <> tell me at <a href={`mailto:${email}?subject=Borderline%20correction`} style={{ color: "var(--paper)" }}>{email}</a>.</> : " get in touch."}
+        {email ? <> tell me at <a href={`mailto:${email}?subject=Cartogram%20correction`} style={{ color: "var(--paper)" }}>{email}</a>.</> : " get in touch."}
       </p>
 
       <p style={{ marginTop: 28 }}>

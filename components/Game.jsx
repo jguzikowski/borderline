@@ -286,7 +286,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
     const last = session?.lastPlay;
     const site = siteUrl();
     return (
-      `Borderline #${puzzleNo} — ${region.name}${hardMode ? " (hard)" : ""}\n` +
+      `Cartogram #${puzzleNo} — ${region.name}${hardMode ? " (hard)" : ""}\n` +
       `${summary?.score ?? score}/${summary?.maxScore ?? total * 3}` +
       (last ? `\nlast time ${last.score}/${last.max_score}` : "") +
       `\n${summary?.grid ?? ""}` +
@@ -321,7 +321,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
     <>
       <header style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div>
-          <div className="eyebrow">Borderline no. {puzzleNo} · {DIFF_LABEL[region.diff]}</div>
+          <div className="eyebrow">Cartogram no. {puzzleNo} · {DIFF_LABEL[region.diff]}</div>
           <h1 className="region">{region.name}</h1>
           <div style={{ fontSize: 13 }} className="muted">{region.note}</div>
         </div>
@@ -480,8 +480,9 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
           <a href="/stats" style={{ marginLeft: 12, fontSize: 14, color: "var(--fog)" }}>Your regions</a>
           {isGuest && (
             <p style={{ fontSize: 12, marginTop: 12 }} className="muted">
-              Playing as a guest. Add an email at the top to keep this history if
-              you clear your browser or switch devices.
+              {process.env.NEXT_PUBLIC_EMAIL_SIGNIN === "on"
+                ? "Playing as a guest. Add an email at the top to keep this history if you clear your browser or switch devices."
+                : "Your history lives in this browser for now. Saved logins are coming soon."}
             </p>
           )}
         </div>

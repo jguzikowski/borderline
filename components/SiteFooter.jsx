@@ -11,12 +11,12 @@ export default function SiteFooter() {
     }} className="muted">
       <a href="/about" style={{ color: "var(--fog)" }}>About</a>
       {email && (
-        <a href={`mailto:${email}?subject=Borderline`} style={{ color: "var(--fog)" }}>
+        <a href={`mailto:${email}?subject=Cartogram`} style={{ color: "var(--fog)" }}>
           Contact
         </a>
       )}
       {email && (
-        <a href={`mailto:${email}?subject=Borderline%20sponsorship`} style={{ color: "var(--fog)" }}>
+        <a href={`mailto:${email}?subject=Cartogram%20sponsorship`} style={{ color: "var(--fog)" }}>
           Sponsor a day
         </a>
       )}

@@ -46,6 +46,20 @@ export default function AuthBar({ signedIn, email, isGuest }) {
     window.location.reload();
   };
 
+  // Email sign-in stays hidden until SMTP is connected. A form that
+  // silently fails is worse than an honest "not yet".
+  const emailEnabled = process.env.NEXT_PUBLIC_EMAIL_SIGNIN === "on";
+
+  if (!emailEnabled && !signedIn) {
+    return (
+      <div style={{ marginBottom: 14, fontSize: 12 }} className="muted">
+        Saved logins are coming soon, so your results carry across devices and
+        you can see whether you improve when a region comes round again. Your
+        history is kept in this browser in the meantime.
+      </div>
+    );
+  }
+
   if (signedIn) {
     return (
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, fontSize: 12 }}>
