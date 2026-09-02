@@ -54,6 +54,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   const pointers = useRef(new Map());
   const pinch = useRef(null);
   const dragged = useRef(false);
+  const pressedShape = useRef(null);
 
   /* ---------------- load geometry and session ---------------- */
 
@@ -148,7 +149,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   /* ---------------- guessing ---------------- */
 
   const openShape = useCallback((code) => {
-    if (dragged.current || results[code] || !session) return;
+    if (results[code] || !session) return;
     setActive(code);
     setMode("menu");
     setTyped("");
@@ -242,7 +243,15 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   const onUp = (e) => {
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) pinch.current = null;
-    setTimeout(() => { dragged.current = false; }, 0);
+
+    // A tap that didn't turn into a drag is a selection. This can't ride
+    // on the path's onClick: setPointerCapture retargets events to the
+    // SVG, so the click never reaches the shape underneath.
+    const code = pressedShape.current;
+    pressedShape.current = null;
+    if (code && !dragged.current && pointers.current.size === 0) openShape(code);
+
+    dragged.current = false;
   };
 
   /* ---------------- share ---------------- */
@@ -340,7 +349,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
                     d={path({ type: "Feature", geometry: t.geometry }) || ""}
                     fill={fill} stroke="var(--ink)" strokeWidth={0.9 / k}
                     style={{ cursor: r ? "default" : "pointer" }}
-                    onClick={() => openShape(t.code)} />
+                    onPointerDown={() => { pressedShape.current = t.code; }} />
                 );
               })}
               <g style={{ pointerEvents: "none" }}>
