@@ -7,7 +7,7 @@ import { dayKeyFor } from "@/lib/daily";
 import { browserClient } from "@/lib/supabase/client";
 import { siteUrl } from "@/lib/site-url";
 import { grade, tally } from "@/lib/grade";
-import { placeInfo, formatFacts } from "@/lib/place-info";
+import { placeInfo, factRows } from "@/lib/place-info";
 
 const CHIP = { exact: "🟩", narrowed: "🟨", miss_narrow: "🟧", miss_exact: "🟥" };
 const FILL = {
@@ -210,7 +210,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
     if (!r || !geo) return;
     setActive(null);
     setInspect({ code, name: r.name, loading: true, data: null });
-    focusShape(code);
+    focusShape(code, { onlyIfHardToSee: true });
     try {
       const data = await placeInfo(r.name, geo.region.atlas);
       setInspect((cur) => (cur && cur.code === code ? { ...cur, loading: false, data } : cur));
@@ -407,6 +407,33 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
     setTimeout(() => setCopied(false), 2400);
   };
 
+  const calloutAt = useMemo(() => {
+    if (!inspect || !path || !geo) return null;
+    const t = geo.targets.find((x) => x.code === inspect.code);
+    if (!t) return null;
+    const b = path.bounds({ type: "Feature", geometry: t.geometry });
+    if (!b || Number.isNaN(b[0][0])) return null;
+
+    const cx = (b[0][0] + b[1][0]) / 2;
+    const sx = cx * view.k + view.x;
+    const top = b[0][1] * view.k + view.y;
+    const bottom = b[1][1] * view.k + view.y;
+
+    const W = 250;
+    const GAP = 12;
+    // Prefer below the shape; flip above when there isn't room.
+    const below = bottom + GAP + 150 < size.h || top - GAP - 150 < 0;
+    const left = Math.max(8, Math.min(size.w - W - 8, sx - W / 2));
+
+    return {
+      left,
+      top: below ? bottom + GAP : null,
+      bottom: below ? null : size.h - top + GAP,
+      arrowLeft: Math.max(10, Math.min(W - 20, sx - left - 5)),
+      below,
+    };
+  }, [inspect, path, geo, view, size]);
+
   const k = view.k;
   const last = session?.lastPlay;
   const activeResolved = active && results[active];
@@ -527,6 +554,47 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
             </g>
           </svg>
         )}
+
+        {inspect && calloutAt && (
+          <div className={`callout ${calloutAt.below ? "below" : "above"}`}
+            role="dialog" aria-label={`About ${inspect.name}`}
+            style={{
+              left: calloutAt.left,
+              ...(calloutAt.below ? { top: calloutAt.top } : { bottom: calloutAt.bottom }),
+            }}>
+            <span className="arrow" style={{ left: calloutAt.arrowLeft }} aria-hidden="true" />
+            <button className="close" aria-label="Close" onClick={() => setInspect(null)}>×</button>
+
+            <h3>{inspect.name}</h3>
+            {inspect.data?.wiki?.description && (
+              <p className="kicker">{inspect.data.wiki.description}</p>
+            )}
+
+            {inspect.loading && <p className="kicker" style={{ margin: 0 }}>Looking it up…</p>}
+
+            {!inspect.loading && factRows(inspect.data?.facts, geo.region.atlas).length > 0 && (
+              <dl>
+                {factRows(inspect.data.facts, geo.region.atlas).map(([label, value]) => (
+                  <div key={label} style={{ display: "contents" }}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {!inspect.loading && !inspect.data?.facts && !inspect.data?.wiki && (
+              <p className="kicker" style={{ margin: 0 }}>No reference entry found.</p>
+            )}
+
+            {!inspect.loading && inspect.data?.wiki?.url && (
+              <p className="foot">
+                <span className="muted">Wikidata / Wikipedia</span>
+                <a href={inspect.data.wiki.url} target="_blank" rel="noopener noreferrer">Read more →</a>
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div aria-live="polite">
@@ -540,52 +608,6 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
           Tap a shape, then name it for three points or narrow it to one of three for one.
           A wrong answer costs what a right one would have paid.
         </p>
-      )}
-
-      {inspect && (
-        <div className="panel" style={{ borderLeftColor: "var(--fog)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-            <h2 style={{ margin: 0 }}>{inspect.name}</h2>
-            <button className="quiet" style={{ fontSize: 12 }} onClick={() => setInspect(null)}>Close</button>
-          </div>
-
-          {inspect.loading && <p style={{ fontSize: 13, marginBottom: 0 }} className="muted">Looking it up…</p>}
-
-          {!inspect.loading && !inspect.data?.wiki && !inspect.data?.facts && (
-            <p style={{ fontSize: 13, marginBottom: 0 }} className="muted">
-              Couldn&rsquo;t find a reference entry for this one.
-            </p>
-          )}
-
-          {!inspect.loading && formatFacts(inspect.data?.facts).length > 0 && (
-            <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 14px",
-                         fontFamily: "var(--font-mono)", fontSize: 12, margin: "10px 0 0" }}>
-              {formatFacts(inspect.data.facts).map(([label, value]) => (
-                <div key={label} style={{ display: "contents" }}>
-                  <dt className="muted">{label}</dt>
-                  <dd style={{ margin: 0 }}>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-
-          {!inspect.loading && inspect.data?.wiki?.extract && (
-            <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 12, marginBottom: 0 }}>
-              {inspect.data.wiki.extract.length > 320
-                ? inspect.data.wiki.extract.slice(0, 320).replace(/\s+\S*$/, "") + "…"
-                : inspect.data.wiki.extract}
-              {inspect.data.wiki.url && (
-                <>
-                  {" "}
-                  <a href={inspect.data.wiki.url} target="_blank" rel="noopener noreferrer"
-                     style={{ color: "var(--fog)" }}>
-                    Wikipedia
-                  </a>
-                </>
-              )}
-            </p>
-          )}
-        </div>
       )}
 
       {active && !activeResolved && (
