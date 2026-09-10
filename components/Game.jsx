@@ -7,6 +7,7 @@ import { dayKeyFor } from "@/lib/daily";
 import { browserClient } from "@/lib/supabase/client";
 import { siteUrl } from "@/lib/site-url";
 import { grade, tally } from "@/lib/grade";
+import { placeInfo, formatFacts } from "@/lib/place-info";
 
 const CHIP = { exact: "🟩", narrowed: "🟨", miss_narrow: "🟧", miss_exact: "🟥" };
 const FILL = {
@@ -54,6 +55,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   const [summary, setSummary] = useState(null);
   const [hardMode, setHardMode] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(true);
+  const [inspect, setInspect] = useState(null); // { code, name, loading, data }
   const [copied, setCopied] = useState(false);
   const [size, setSize] = useState({ w: 640, h: 460 });
   const [view, setView] = useState({ k: 1, x: 0, y: 0 });
@@ -193,11 +195,29 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   const openShape = useCallback((code, opts) => {
     if (results[code] || !session) return;
     setActive(code);
+    setInspect(null);
     setTyped("");
     setChoices([]);
     focusShape(code, opts);
     setTimeout(() => inputRef.current?.focus(), 60);
   }, [results, session, focusShape]);
+
+  // Reviewing an answered shape. Highlights it on the map and pulls a
+  // short reference entry, which is where the learning actually happens:
+  // most people want to know what they just got wrong.
+  const review = useCallback(async (code) => {
+    const r = results[code];
+    if (!r || !geo) return;
+    setActive(null);
+    setInspect({ code, name: r.name, loading: true, data: null });
+    focusShape(code);
+    try {
+      const data = await placeInfo(r.name, geo.region.atlas);
+      setInspect((cur) => (cur && cur.code === code ? { ...cur, loading: false, data } : cur));
+    } catch {
+      setInspect((cur) => (cur && cur.code === code ? { ...cur, loading: false, data: null } : cur));
+    }
+  }, [results, geo, focusShape]);
 
   // Next unanswered shape in map order, wrapping around.
   const nextUnanswered = useCallback((after) => {
@@ -265,12 +285,13 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   // Escape backs out, 2 opens the three-way choice when not mid-typing.
   useEffect(() => {
     const onKey = (e) => {
-      if (!active) return;
-      if (e.key === "Escape") { setActive(null); setChoices([]); setTyped(""); }
+      if (e.key !== "Escape") return;
+      if (inspect) { setInspect(null); return; }
+      if (active) { setActive(null); setChoices([]); setTyped(""); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active]);
+  }, [active, inspect]);
 
   /* ---------------- zoom and pan ---------------- */
 
@@ -331,7 +352,9 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
     if (pointers.current.size < 2) pinch.current = null;
     const code = pressedShape.current;
     pressedShape.current = null;
-    if (code && !dragged.current && pointers.current.size === 0) openShape(code);
+    if (code && !dragged.current && pointers.current.size === 0) {
+      results[code] ? review(code) : openShape(code);
+    }
     dragged.current = false;
   };
 
@@ -468,20 +491,23 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
               {geo.targets.map((t, i) => {
                 const r = results[t.code];
                 const fill = r ? FILL[r.outcome] : active === t.code ? "var(--amber)" : "var(--bone)";
+                const lit = active === t.code || inspect?.code === t.code;
                 return (
                   <path key={t.code} className="target"
                     d={path({ type: "Feature", geometry: t.geometry }) || ""}
                     fill={fill}
-                    stroke={active === t.code ? "var(--paper)" : "var(--ink)"}
-                    strokeWidth={(active === t.code ? 2 : 0.9) / Math.max(k, 1)}
+                    stroke={lit ? "var(--paper)" : "var(--ink)"}
+                    strokeWidth={(lit ? 2.2 : 0.9) / Math.max(k, 1)}
                     role="button"
-                    tabIndex={r ? -1 : 0}
-                    aria-label={r ? `${r.name}, answered` : `Unidentified shape ${i + 1} of ${total}`}
-                    aria-disabled={r ? "true" : "false"}
-                    style={{ cursor: r ? "default" : "pointer" }}
+                    tabIndex={0}
+                    aria-label={r ? `${r.name}, answered. Show details.` : `Unidentified shape ${i + 1} of ${total}`}
+                    style={{ cursor: "pointer" }}
                     onPointerDown={() => { pressedShape.current = t.code; }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openShape(t.code); }
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        r ? review(t.code) : openShape(t.code);
+                      }
                     }} />
                 );
               })}
@@ -514,6 +540,52 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
           Tap a shape, then name it for three points or narrow it to one of three for one.
           A wrong answer costs what a right one would have paid.
         </p>
+      )}
+
+      {inspect && (
+        <div className="panel" style={{ borderLeftColor: "var(--fog)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+            <h2 style={{ margin: 0 }}>{inspect.name}</h2>
+            <button className="quiet" style={{ fontSize: 12 }} onClick={() => setInspect(null)}>Close</button>
+          </div>
+
+          {inspect.loading && <p style={{ fontSize: 13, marginBottom: 0 }} className="muted">Looking it up…</p>}
+
+          {!inspect.loading && !inspect.data?.wiki && !inspect.data?.facts && (
+            <p style={{ fontSize: 13, marginBottom: 0 }} className="muted">
+              Couldn&rsquo;t find a reference entry for this one.
+            </p>
+          )}
+
+          {!inspect.loading && formatFacts(inspect.data?.facts).length > 0 && (
+            <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 14px",
+                         fontFamily: "var(--font-mono)", fontSize: 12, margin: "10px 0 0" }}>
+              {formatFacts(inspect.data.facts).map(([label, value]) => (
+                <div key={label} style={{ display: "contents" }}>
+                  <dt className="muted">{label}</dt>
+                  <dd style={{ margin: 0 }}>{value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {!inspect.loading && inspect.data?.wiki?.extract && (
+            <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 12, marginBottom: 0 }}>
+              {inspect.data.wiki.extract.length > 320
+                ? inspect.data.wiki.extract.slice(0, 320).replace(/\s+\S*$/, "") + "…"
+                : inspect.data.wiki.extract}
+              {inspect.data.wiki.url && (
+                <>
+                  {" "}
+                  <a href={inspect.data.wiki.url} target="_blank" rel="noopener noreferrer"
+                     style={{ color: "var(--fog)" }}>
+                    Wikipedia
+                  </a>
+                </>
+              )}
+            </p>
+          )}
+        </div>
       )}
 
       {active && !activeResolved && (
@@ -610,18 +682,21 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
       {total > 0 && (
         <div style={{ marginTop: 20 }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>
-            {done ? "The full list" : `${total - answeredCount} still unnamed · tap one to jump to it`}
+            {done ? "The full list · tap any to review it" : `${total - answeredCount} still unnamed · tap one to jump to it`}
           </div>
           <div className="chips">
             {geo.targets.map((t, i) => {
               const r = results[t.code];
               if (r) {
                 return (
-                  <span key={t.code} className="chip"
-                    style={{ color: FILL[r.outcome], borderColor: "transparent",
-                             background: "rgba(255,255,255,0.05)" }}>
+                  <button key={t.code} className="chip"
+                    onClick={() => review(t.code)}
+                    aria-label={`Show ${r.name} on the map`}
+                    style={{ color: FILL[r.outcome],
+                             borderColor: inspect?.code === t.code ? FILL[r.outcome] : "transparent",
+                             background: "rgba(255,255,255,0.05)", cursor: "pointer" }}>
                     {r.name}
-                  </span>
+                  </button>
                 );
               }
               // Unanswered entries are buttons: clicking one zooms the map
