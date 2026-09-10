@@ -53,6 +53,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   const [flash, setFlash] = useState(null);
   const [summary, setSummary] = useState(null);
   const [hardMode, setHardMode] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(true);
   const [copied, setCopied] = useState(false);
   const [size, setSize] = useState({ w: 640, h: 460 });
   const [view, setView] = useState({ k: 1, x: 0, y: 0 });
@@ -154,21 +155,88 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
 
   /* ---------------- guessing ---------------- */
 
-  const openShape = useCallback((code) => {
+  // Move the viewport onto a shape. Small countries are the whole problem
+  // here: Brunei at the default zoom is a few pixels, and no amount of
+  // squinting finds it.
+  const focusShape = useCallback((code, { onlyIfHardToSee = false } = {}) => {
+    if (!path || !geo) return;
+    const target = geo.targets.find((t) => t.code === code);
+    if (!target) return;
+
+    const feat = { type: "Feature", geometry: target.geometry };
+    const b = path.bounds(feat);
+    if (!b || Number.isNaN(b[0][0])) return;
+
+    const [[x0, y0], [x1, y1]] = b;
+    const w = Math.max(x1 - x0, 1);
+    const h = Math.max(y1 - y0, 1);
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+
+    if (onlyIfHardToSee) {
+      // Already big enough and on screen? Leave the view alone. Yanking
+      // the map on every answer is worse than not moving it at all.
+      const kNow = view.k;
+      const sx = cx * kNow + view.x;
+      const sy = cy * kNow + view.y;
+      const onScreen = sx > 20 && sx < size.w - 20 && sy > 20 && sy < size.h - 20;
+      const bigEnough = w * kNow > size.w * 0.06 && h * kNow > size.h * 0.06;
+      if (onScreen && bigEnough) return;
+    }
+
+    // Fill about a third of the frame, within the usual zoom limits.
+    const fit = Math.min((size.w * 0.34) / w, (size.h * 0.34) / h);
+    const k = Math.max(1, Math.min(MAX_K, fit));
+    setView(clamp({ k, x: size.w / 2 - cx * k, y: size.h / 2 - cy * k }));
+  }, [path, geo, size, view]);
+
+  const openShape = useCallback((code, opts) => {
     if (results[code] || !session) return;
     setActive(code);
     setTyped("");
     setChoices([]);
-    setTimeout(() => inputRef.current?.focus(), 40);
-  }, [results, session]);
+    focusShape(code, opts);
+    setTimeout(() => inputRef.current?.focus(), 60);
+  }, [results, session, focusShape]);
+
+  // Next unanswered shape in map order, wrapping around.
+  const nextUnanswered = useCallback((after) => {
+    if (!geo) return null;
+    const list = geo.targets.map((t) => t.code);
+    const start = after ? list.indexOf(after) + 1 : 0;
+    for (let i = 0; i < list.length; i++) {
+      const code = list[(start + i) % list.length];
+      if (!results[code] && code !== after) return code;
+    }
+    return null;
+  }, [geo, results]);
 
   const settle = (code, outcome, name, message) => {
-    setResults((r) => ({ ...r, [code]: { outcome, name } }));
+    const updated = { ...results, [code]: { outcome, name } };
+    setResults(updated);
     setFlash({ code, outcome, message });
     setActive(null);
     setTyped("");
     setChoices([]);
     setTimeout(() => setFlash((f) => (f && f.code === code ? null : f)), FLASH_MS);
+
+    if (!autoAdvance || !geo) return;
+    const list = geo.targets.map((t) => t.code);
+    const start = list.indexOf(code) + 1;
+    let next = null;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[(start + i) % list.length];
+      if (!updated[c]) { next = c; break; }
+    }
+    if (!next) return;
+    // Wait out the feedback so the answer is readable before moving on.
+    setTimeout(() => {
+      setActive(next);
+      setTyped("");
+      setChoices([]);
+      focusShape(next, { onlyIfHardToSee: true });
+      setTimeout(() => inputRef.current?.focus(), 60);
+    }, FLASH_MS - 300);
   };
 
   const guess = async (mode_, value) => {
@@ -340,6 +408,17 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
             Fit region
           </button>
         )}
+        {!done && (
+          <button className="tiny" onClick={() => { const n = nextUnanswered(active); if (n) openShape(n); }}
+            title="Jump to the next shape you haven't answered.">
+            Next shape
+          </button>
+        )}
+        <button className="tiny" onClick={() => setAutoAdvance((a) => !a)}
+          title="After each answer, move straight to the next unanswered shape."
+          style={{ color: autoAdvance ? "var(--amber)" : "var(--fog)" }}>
+          Auto-advance {autoAdvance ? "on" : "off"}
+        </button>
         <span style={{ fontSize: 12 }} className="muted">
           {hardMode ? "Neighbours hidden." : "Zoom out to get your bearings."}
         </span>
@@ -488,18 +567,32 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
       {total > 0 && (
         <div style={{ marginTop: 20 }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>
-            {done ? "The full list" : `${total - answeredCount} still unnamed`}
+            {done ? "The full list" : `${total - answeredCount} still unnamed · tap one to jump to it`}
           </div>
           <div className="chips">
-            {geo.targets.map((t) => {
+            {geo.targets.map((t, i) => {
               const r = results[t.code];
+              if (r) {
+                return (
+                  <span key={t.code} className="chip"
+                    style={{ color: FILL[r.outcome], borderColor: "transparent",
+                             background: "rgba(255,255,255,0.05)" }}>
+                    {r.name}
+                  </span>
+                );
+              }
+              // Unanswered entries are buttons: clicking one zooms the map
+              // to that shape and opens the prompt. Finding Brunei by eye
+              // is not the puzzle.
               return (
-                <span key={t.code} className="chip"
-                  style={{ color: r ? FILL[r.outcome] : "var(--fog)",
-                           borderColor: r ? "transparent" : "var(--hair)",
-                           background: r ? "rgba(255,255,255,0.05)" : "transparent" }}>
-                  {r ? r.name : "· · ·"}
-                </span>
+                <button key={t.code} className="chip"
+                  aria-label={`Go to unidentified shape ${i + 1}`}
+                  onClick={() => openShape(t.code)}
+                  style={{ color: active === t.code ? "var(--amber)" : "var(--fog)",
+                           borderColor: active === t.code ? "var(--amber)" : "var(--hair)",
+                           background: "transparent", cursor: "pointer" }}>
+                  · · ·
+                </button>
               );
             })}
           </div>
