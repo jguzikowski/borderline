@@ -352,16 +352,36 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
     );
   };
 
+  // Desktop browsers route navigator.share into whatever mail client is
+  // registered, which nobody wants. Only offer the share sheet on touch
+  // devices, where it's the good path; copy everywhere else.
   const share = async () => {
     const text = shareText();
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try { await navigator.share({ text }); return; } catch { /* dismissed */ }
+    const touch =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(pointer: coarse)").matches &&
+      typeof navigator !== "undefined" &&
+      !!navigator.share;
+
+    if (touch) {
+      try { await navigator.share({ text }); return; } catch { /* dismissed, fall through */ }
     }
+
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* clipboard blocked */ }
+    } catch {
+      // Older browsers and non-secure contexts.
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch { /* nothing left to try */ }
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2400);
   };
 
   const k = view.k;
@@ -380,6 +400,12 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
         </span>
         <span aria-hidden="true">·</span>
         <span>{total || "…"} SHAPES</span>
+        {session?.streak > 1 && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span style={{ color: "var(--amber)" }}>{session.streak} DAY STREAK</span>
+          </>
+        )}
       </div>
 
       <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14 }}>
@@ -538,6 +564,21 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
             <span>{counts.miss_exact + counts.miss_narrow} missed</span>
           </div>
 
+          {session?.streak > 0 && (
+            <p style={{ marginTop: 14, marginBottom: 0, fontSize: 13, lineHeight: 1.5 }}>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--amber)" }}>
+                {session.streak === 1 ? "Day 1" : `${session.streak} days in a row`}
+              </span>
+              <span className="muted">
+                {session.streak === 1
+                  ? " · come back tomorrow to start a streak."
+                  : session.streak < 5
+                  ? " · come back tomorrow to keep it going."
+                  : ` · that's a long way to fall. New region tomorrow.`}
+              </span>
+            </p>
+          )}
+
           {last && (
             <p style={{ fontSize: 13, marginTop: 12, marginBottom: 0,
               color: summary.score > last.score ? "var(--jade)" : summary.score === last.score ? "var(--fog)" : "var(--rust)" }}>
@@ -551,7 +592,9 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
 
           <div className="grid-line" style={{ margin: "14px 0" }}>{summary.grid}</div>
 
-          <button className="primary" onClick={share}>{copied ? "Copied" : "Share result"}</button>
+          <button className="primary" onClick={share}>
+            {copied ? "Copied to clipboard" : "Share result"}
+          </button>
           <a href="/stats" style={{ marginLeft: 14, fontSize: 13, color: "var(--fog)" }}>Your regions</a>
 
           {isGuest && (
