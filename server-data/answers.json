@@ -374,5 +374,109 @@
     "dad267bc": "Maryland",
     "35baeaeb": "New York",
     "0f2f1ebd": "Virginia"
+  },
+  "rustbelt": {
+    "71065581": "New York",
+    "8157b1ea": "Indiana",
+    "836848e8": "Pennsylvania",
+    "99ed599c": "West Virginia",
+    "b7b744c9": "Illinois",
+    "fc62655a": "Michigan",
+    "bd7e09cb": "Ohio",
+    "a0c340c1": "Wisconsin"
+  },
+  "gulfcoast": {
+    "d7f1e66f": "Alabama",
+    "b06cb703": "Florida",
+    "dc8326ed": "Texas",
+    "d155fc78": "Mississippi",
+    "3eb1c1ba": "Louisiana"
+  },
+  "fourcorners": {
+    "afc675df": "Arizona",
+    "2b2397b6": "Colorado",
+    "52e9d629": "New Mexico",
+    "b571425b": "Utah"
+  },
+  "uppermidwest": {
+    "55b33e99": "Minnesota",
+    "056e5c2b": "North Dakota",
+    "042a6163": "South Dakota",
+    "4e5cd270": "Iowa",
+    "133e74e0": "Michigan",
+    "d49e370e": "Wisconsin"
+  },
+  "borderstates": {
+    "65249444": "Texas",
+    "c265685d": "Arizona",
+    "5651394a": "New Mexico",
+    "5c4cc203": "California"
+  },
+  "tornadoalley": {
+    "b76036c3": "Colorado",
+    "dd8a4264": "Kansas",
+    "617015a3": "Oklahoma",
+    "7ffd6e2a": "South Dakota",
+    "7fb52925": "Texas",
+    "1d639ed9": "Missouri",
+    "0f3e355f": "Iowa",
+    "3e7e6a00": "Nebraska"
+  },
+  "necorridor": {
+    "83976659": "Maryland",
+    "e748cba1": "Massachusetts",
+    "fc2a12e4": "New Jersey",
+    "9ca52aee": "Pennsylvania",
+    "256a6623": "Connecticut",
+    "1b08148e": "Delaware",
+    "1f7072a0": "District of Columbia",
+    "88c92fee": "New York",
+    "dee33916": "Virginia",
+    "3d62d26e": "Rhode Island"
+  },
+  "pnw": {
+    "24f6ddb9": "Montana",
+    "d7cb1552": "Oregon",
+    "f4e15917": "Washington",
+    "cf0ff373": "Idaho"
+  },
+  "sunbelt": {
+    "0f44fd0c": "Alabama",
+    "bb5c00c4": "Arizona",
+    "5d43dd25": "Florida",
+    "327be36b": "Georgia",
+    "18e5fa8a": "Texas",
+    "b2b3f5c5": "New Mexico",
+    "f0fb356d": "California",
+    "ef6e906b": "Mississippi",
+    "ab1e5284": "South Carolina",
+    "79406c4b": "Nevada",
+    "1aacca61": "Louisiana"
+  },
+  "ohiovalley": {
+    "d1f70fb9": "Indiana",
+    "afa1a83a": "Pennsylvania",
+    "4f2c8a6c": "West Virginia",
+    "03982c50": "Illinois",
+    "78cedca0": "Kentucky",
+    "3bd8e481": "Ohio"
+  },
+  "mississippi": {
+    "cce70069": "Minnesota",
+    "dd1164fb": "Missouri",
+    "ac8989ee": "Illinois",
+    "4968186a": "Arkansas",
+    "95d9f63a": "Iowa",
+    "f05ea175": "Kentucky",
+    "f348c2a7": "Mississippi",
+    "a8ebec9f": "Tennessee",
+    "e0838070": "Wisconsin",
+    "3519f28d": "Louisiana"
+  },
+  "bigsky": {
+    "ae7534aa": "North Dakota",
+    "3fe115b2": "South Dakota",
+    "b64c9c95": "Wyoming",
+    "f0b6ed86": "Montana"
   }
 }

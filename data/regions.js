@@ -70,8 +70,41 @@ export const REGIONS = [
     members: ["California","Oregon","Washington","Idaho","Nevada"] },
   { id: "midatlantic", atlas: "us", diff: 3, name: "The Mid-Atlantic", note: "The corridor states.",
     members: ["New York","New Jersey","Pennsylvania","Delaware","Maryland","Virginia","West Virginia","District of Columbia"] },
+  { id: "rustbelt", atlas: "us", diff: 3, name: "The Rust Belt", note: "Where the factories were.",
+    members: ["Pennsylvania","Ohio","Michigan","Indiana","Illinois","Wisconsin","New York","West Virginia"] },
+  { id: "gulfcoast", atlas: "us", diff: 2, name: "The Gulf Coast", note: "Everything on the warm water.",
+    members: ["Texas","Louisiana","Mississippi","Alabama","Florida"] },
+  { id: "fourcorners", atlas: "us", diff: 2, name: "The Four Corners", note: "The only place four states meet.",
+    members: ["Arizona","New Mexico","Colorado","Utah"] },
+  { id: "uppermidwest", atlas: "us", diff: 4, name: "The Upper Midwest", note: "Lakes, cold, and hockey.",
+    members: ["Minnesota","Wisconsin","Michigan","Iowa","North Dakota","South Dakota"] },
+  { id: "borderstates", atlas: "us", diff: 1, name: "The Border States", note: "Everything touching Mexico.",
+    members: ["California","Arizona","New Mexico","Texas"] },
+  { id: "tornadoalley", atlas: "us", diff: 4, name: "Tornado Alley", note: "Spring is eventful here.",
+    members: ["Texas","Oklahoma","Kansas","Nebraska","South Dakota","Iowa","Missouri","Colorado"] },
+  { id: "necorridor", atlas: "us", diff: 4, name: "The Northeast Corridor", note: "Boston to Washington, by rail.",
+    members: ["Massachusetts","Rhode Island","Connecticut","New York","New Jersey","Pennsylvania","Delaware","Maryland","District of Columbia","Virginia"] },
+  { id: "pnw", atlas: "us", diff: 2, name: "The Pacific Northwest", note: "Rain on one side, desert on the other.",
+    members: ["Washington","Oregon","Idaho","Montana"] },
+  { id: "sunbelt", atlas: "us", diff: 3, name: "The Sun Belt", note: "Where everyone keeps moving.",
+    members: ["California","Arizona","New Mexico","Texas","Louisiana","Mississippi","Alabama","Georgia","Florida","South Carolina","Nevada"] },
+  { id: "ohiovalley", atlas: "us", diff: 4, name: "The Ohio River Valley", note: "Following the river.",
+    members: ["Ohio","Kentucky","Indiana","Illinois","West Virginia","Pennsylvania"] },
+  { id: "mississippi", atlas: "us", diff: 4, name: "The Mississippi States", note: "Source to delta.",
+    members: ["Minnesota","Wisconsin","Iowa","Illinois","Missouri","Kentucky","Tennessee","Arkansas","Mississippi","Louisiana"] },
+  { id: "bigsky", atlas: "us", diff: 3, name: "The Dakotas and Big Sky", note: "Empty, in the good way.",
+    members: ["North Dakota","South Dakota","Montana","Wyoming"] },
 ];
 
 export const DIFF_LABEL = { 1: "Gentle", 2: "Warm-up", 3: "Steady", 4: "Testing", 5: "Brutal" };
 
 export const regionById = (id) => REGIONS.find((r) => r.id === id);
+
+// Two puzzles a day, one per track. A track is what you play; an atlas
+// is which geometry file it comes from. They line up today, but keeping
+// them separate means a third track later doesn't need a third atlas.
+export const TRACKS = ["world", "us"];
+export const TRACK_LABEL = { world: "World", us: "United States" };
+export const TRACK_SHORT = { world: "World", us: "US" };
+export const trackOf = (region) => (region.atlas === "us" ? "us" : "world");
+export const regionsInTrack = (track) => REGIONS.filter((r) => trackOf(r) === track);
