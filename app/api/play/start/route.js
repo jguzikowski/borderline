@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { serverClient, adminClient } from "@/lib/supabase/server";
 import { codesForRegion } from "@/lib/answers";
-import { utcDayKey, isPlausibleDayKey } from "@/lib/daily";
+import { utcDayKey, isPlausibleDayKey, isTrack } from "@/lib/daily";
 import { resolvePuzzle, ensurePuzzleRow } from "@/lib/puzzle";
 
 // Starts (or resumes) today's play. Returns which shapes are already
 // answered so a refresh doesn't lose progress or let you re-guess.
-export async function POST(req) {
+async function handle(req) {
   const { hardMode = false, dayKey: claimed, track: rawTrack } = await req.json().catch(() => ({}));
   const track = isTrack(rawTrack) ? rawTrack : "world";
 
@@ -94,4 +94,13 @@ export async function POST(req) {
     streak,
     total: codesForRegion(region.id).length,
   });
+}
+
+export async function POST(req) {
+  try {
+    return await handle(req);
+  } catch (err) {
+    console.error("/api/play/start threw", err);
+    return NextResponse.json({ error: err?.message || "Unexpected server error." }, { status: 500 });
+  }
 }

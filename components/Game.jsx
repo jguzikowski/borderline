@@ -30,8 +30,14 @@ const post = async (url, body) => {
     try {
       return JSON.parse(text);
     } catch {
-      console.error(`Non-JSON response from ${url} (HTTP ${r.status})`, text.slice(0, 400));
-      return { error: `${url} returned a web page instead of data (HTTP ${r.status}). Check that NEXT_PUBLIC_SUPABASE_URL points at your Supabase project, not at this site.` };
+      console.error(`Non-JSON response from ${url} (HTTP ${r.status})`, text.slice(0, 600));
+      if (r.status >= 500) {
+        return { error: `${url} failed on the server (HTTP ${r.status}). The deployment logs will name the cause.` };
+      }
+      if (r.status === 404) {
+        return { error: `${url} doesn't exist (404). The route may not have deployed.` };
+      }
+      return { error: `${url} returned a page instead of data (HTTP ${r.status}).` };
     }
   } catch (err) {
     return { error: `Couldn't reach ${url}: ${err.message}` };
