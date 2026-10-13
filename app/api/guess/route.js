@@ -31,7 +31,12 @@ export async function POST(req) {
   }
 
   const target = nameForCode(play.region_id, code);
-  if (!target) return NextResponse.json({ error: "unknown shape" }, { status: 400 });
+  if (!target) {
+    return NextResponse.json(
+      { error: `Shape ${code} isn't part of ${play.region_id}. Reload to start this region again.` },
+      { status: 400 }
+    );
+  }
 
   const right = mode === "exact" ? matches(guess ?? "", target) : (guess ?? "") === target;
   const outcome = right

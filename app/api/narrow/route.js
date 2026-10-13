@@ -21,7 +21,12 @@ export async function POST(req) {
   }
 
   const target = nameForCode(play.region_id, code);
-  if (!target) return NextResponse.json({ error: "unknown shape" }, { status: 400 });
+  if (!target) {
+    return NextResponse.json(
+      { error: `Shape ${code} isn't part of ${play.region_id}. Reload to start this region again.` },
+      { status: 400 }
+    );
+  }
 
   const { data: done } = await db.from("answers").select("target_name").eq("play_id", play.id);
   const resolved = new Set((done ?? []).map((d) => d.target_name));

@@ -26,11 +26,23 @@ async function handle(req) {
 
   let { data: play } = await db
     .from("plays")
-    .select("id, hard_mode, completed_at, score")
+    .select("id, hard_mode, completed_at, score, region_id")
     .eq("user_id", user.id)
     .eq("puzzle_n", n)
     .eq("track", track)
     .maybeSingle();
+
+  // A play whose region no longer matches today's is unplayable: its
+  // answers reference shapes that aren't on the board, so every lookup
+  // comes back as an unknown shape. This happens when the rotation
+  // changes under an in-progress round, as it did when the single pool
+  // was split into two tracks. An unfinished one is cleared and started
+  // again; a finished one is left alone, since that score was earned
+  // against the region it was actually played on.
+  if (play && play.region_id !== region.id && !play.completed_at) {
+    await db.from("plays").delete().eq("id", play.id); // answers cascade
+    play = null;
+  }
 
   if (!play) {
     const { data, error } = await db

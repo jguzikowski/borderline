@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "build:regions": "node scripts/build-regions.mjs"
+    "build:regions": "node scripts/build-regions.mjs && node scripts/verify-regions.mjs",
+    "verify:regions": "node scripts/verify-regions.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
