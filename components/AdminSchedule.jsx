@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-export default function AdminSchedule({ rows, regions }) {
+export default function AdminSchedule({ rows, regions, track }) {
   const [state, setState] = useState(() =>
     Object.fromEntries(
       rows.map((r) => [r.n, { regionId: r.regionId, pinned: r.pinned, locked: r.locked, plays: r.plays, status: null }])
@@ -21,7 +21,7 @@ export default function AdminSchedule({ rows, regions }) {
     const res = await fetch("/api/admin/unlock", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ n: row.n }),
+      body: JSON.stringify({ n: row.n, track }),
     });
     const d = await res.json().catch(() => ({}));
     setState((s) => ({
@@ -37,7 +37,7 @@ export default function AdminSchedule({ rows, regions }) {
     const res = await fetch("/api/admin/schedule", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ n: row.n, regionId, dayKey: row.dayKey }),
+      body: JSON.stringify({ n: row.n, regionId, dayKey: row.dayKey, track }),
     });
     const d = await res.json().catch(() => ({}));
     setState((s) => ({

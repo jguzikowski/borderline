@@ -7,7 +7,8 @@ import { resolvePuzzle, ensurePuzzleRow } from "@/lib/puzzle";
 // Starts (or resumes) today's play. Returns which shapes are already
 // answered so a refresh doesn't lose progress or let you re-guess.
 export async function POST(req) {
-  const { hardMode = false, dayKey: claimed } = await req.json().catch(() => ({}));
+  const { hardMode = false, dayKey: claimed, track: rawTrack } = await req.json().catch(() => ({}));
+  const track = isTrack(rawTrack) ? rawTrack : "world";
 
   const supabase = serverClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -18,16 +19,17 @@ export async function POST(req) {
   const dayKey = isPlausibleDayKey(claimed) ? claimed : utcDayKey();
 
   // A scheduled override wins over the generated rotation.
-  const { n, region } = await resolvePuzzle(dayKey);
+  const { n, region } = await resolvePuzzle(dayKey, track);
 
   const db = adminClient();
-  await ensurePuzzleRow(db, dayKey, region);
+  await ensurePuzzleRow(db, dayKey, region, track);
 
   let { data: play } = await db
     .from("plays")
     .select("id, hard_mode, completed_at, score")
     .eq("user_id", user.id)
     .eq("puzzle_n", n)
+    .eq("track", track)
     .maybeSingle();
 
   if (!play) {
@@ -36,6 +38,7 @@ export async function POST(req) {
       .insert({
         user_id: user.id,
         puzzle_n: n,
+        track,
         region_id: region.id,
         hard_mode: !!hardMode,
         max_score: codesForRegion(region.id).length * 3,
@@ -51,6 +54,24 @@ export async function POST(req) {
     .select("code, target_name, outcome, points")
     .eq("play_id", play.id);
 
+  // Streak: consecutive puzzle numbers completed, counting back from
+  // today. Today itself doesn't count until it's finished, so a streak
+  // shown mid-round is what you're defending, not what you've banked.
+  const { data: recent } = await db
+    .from("plays")
+    .select("puzzle_n")
+    .eq("user_id", user.id)
+    .eq("track", track)
+    .not("completed_at", "is", null)
+    .lte("puzzle_n", n)
+    .order("puzzle_n", { ascending: false })
+    .limit(400);
+
+  let streak = 0;
+  const doneNums = new Set((recent ?? []).map((r) => r.puzzle_n));
+  let cursor = doneNums.has(n) ? n : n - 1;
+  while (doneNums.has(cursor)) { streak++; cursor--; }
+
   // Their previous run at this region, for the improvement line.
   const { data: prior } = await db
     .from("plays")
@@ -64,11 +85,13 @@ export async function POST(req) {
   return NextResponse.json({
     playId: play.id,
     puzzleNumber: n,
-    region: { id: region.id, name: region.name, note: region.note, diff: region.diff },
+    track,
+    region: { id: region.id, name: region.name, note: region.note, diff: region.diff, atlas: region.atlas },
     hardMode: play.hard_mode,
     completed: !!play.completed_at,
     answered: answered ?? [],
     lastPlay: prior?.[0] ?? null,
+    streak,
     total: codesForRegion(region.id).length,
   });
 }

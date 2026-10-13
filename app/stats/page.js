@@ -1,5 +1,5 @@
 import { serverClient } from "@/lib/supabase/server";
-import { regionById } from "@/data/regions";
+import { regionById, TRACKS, TRACK_LABEL, trackOf } from "@/data/regions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export default async function Stats() {
 
   const { data: runs } = await supabase
     .from("region_history")
-    .select("region_id, puzzle_n, score, max_score, pct")
+    .select("region_id, track, puzzle_n, score, max_score, pct")
     .order("puzzle_n", { ascending: true });
 
   const grouped = {};

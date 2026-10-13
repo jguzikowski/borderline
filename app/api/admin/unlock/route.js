@@ -9,7 +9,7 @@ import { adminClient } from "@/lib/supabase/server";
 export async function POST(req) {
   if (!isAdmin()) return NextResponse.json({ error: "not authorised" }, { status: 401 });
 
-  const { n } = await req.json().catch(() => ({}));
+  const { n, track } = await req.json().catch(() => ({}));
   if (!Number.isInteger(n)) return NextResponse.json({ error: "bad request" }, { status: 400 });
 
   const db = adminClient();
@@ -17,9 +17,10 @@ export async function POST(req) {
   const { count } = await db
     .from("plays")
     .select("id", { count: "exact", head: true })
-    .eq("puzzle_n", n);
+    .eq("puzzle_n", n)
+    .eq("track", track);
 
-  const { error } = await db.from("plays").delete().eq("puzzle_n", n);
+  const { error } = await db.from("plays").delete().eq("puzzle_n", n).eq("track", track);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true, deleted: count ?? 0 });

@@ -38,7 +38,8 @@ const post = async (url, body) => {
   }
 };
 
-export default function Game({ puzzleNumber: serverNumber, region: serverRegion, signedIn, isGuest }) {
+export default function Game({ puzzleNumber: serverNumber, region: serverRegion, signedIn, isGuest,
+                               track = "world", onProgress, otherTrack, onSwitchTrack }) {
   const [resolved, setResolved] = useState({ n: serverNumber, region: serverRegion });
   const puzzleNo = resolved.n;
   const region = resolved.region;
@@ -93,7 +94,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
           return;
         }
       }
-      const d = await post("/api/play/start", { hardMode: false, dayKey: dayKeyFor() });
+      const d = await post("/api/play/start", { hardMode: false, dayKey: dayKeyFor(), track });
       if (!alive) return;
       if (d.error) { setError(d.error); return; }
       setSession(d);
@@ -104,7 +105,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
       setResults(seeded);
     })();
     return () => { alive = false; };
-  }, [signedIn, isGuest]);
+  }, [signedIn, isGuest, track]);
 
   useEffect(() => {
     const el = frameRef.current;
@@ -151,7 +152,7 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
   useEffect(() => {
     if (!done || !session || summary) return;
     post("/api/play/complete", { playId: session.playId }).then((d) => {
-      if (!d.error) setSummary(d);
+      if (!d.error) { setSummary(d); onProgress?.(); }
     });
   }, [done, session, summary]);
 
@@ -690,6 +691,26 @@ export default function Game({ puzzleNumber: serverNumber, region: serverRegion,
             {copied ? "Copied to clipboard" : "Share result"}
           </button>
           <a href="/stats" style={{ marginLeft: 14, fontSize: 13, color: "var(--fog)" }}>Your regions</a>
+
+          {otherTrack && !otherTrack.completed && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--hair)" }}>
+              <div className="eyebrow" style={{ marginBottom: 6 }}>
+                {otherTrack.started ? "Still open today" : "Also today"}
+              </div>
+              <button onClick={onSwitchTrack} style={{ textAlign: "left" }}>
+                {otherTrack.region.name}
+                <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>
+                  {otherTrack.total} shapes →
+                </span>
+              </button>
+            </div>
+          )}
+
+          {otherTrack?.completed && (
+            <p style={{ fontSize: 13, marginTop: 16, marginBottom: 0 }} className="muted">
+              Both maps done today. New pair tomorrow.
+            </p>
+          )}
 
           {isGuest && (
             <p style={{ fontSize: 12, marginTop: 14, marginBottom: 0 }} className="muted">

@@ -8,6 +8,8 @@ import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 // readings rather than body text.
 const display = Fraunces({
   subsets: ["latin"],
+  // No `weight` here on purpose: naming weights loads static instances,
+  // and next/font only allows custom axes on the variable font.
   axes: ["SOFT", "WONK"],
   variable: "--font-fraunces",
   display: "swap",
