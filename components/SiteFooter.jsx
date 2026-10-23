@@ -20,6 +20,7 @@ export default function SiteFooter() {
           Sponsor a day
         </a>
       )}
+      <span>Made by James Guzikowski</span>
       <span>Boundaries from Natural Earth, public domain.</span>
     </footer>
   );
